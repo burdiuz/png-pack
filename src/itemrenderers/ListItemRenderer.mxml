@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:ItemRenderer xmlns:fx="http://ns.adobe.com/mxml/2009"
+                xmlns:s="library://ns.adobe.com/flex/spark"
+                xmlns:mx="library://ns.adobe.com/flex/mx"
+                autoDrawBackground="false" width="100%">
+    <fx:Metadata>
+        [Event(type="events.ItemEvent", name="itemRemove")]
+    </fx:Metadata>
+    <fx:Script><![CDATA[
+        import data.IListItem;
+        import data.ItemType;
+        import data.ListInputItem;
+        import data.ListItem;
+        import data.bin.BinUtils;
+        
+        import events.ItemEvent;
+        import events.PromptEvent;
+        
+        import mx.controls.Alert;
+        import mx.events.FlexEvent;
+        
+        import spark.events.ListEvent;
+
+        [Embed(source="../icons/collapse_icon.png")]
+        static public const COLLAPSE_ICON: Class;
+        [Embed(source="../icons/expand_icon.png")]
+        static public const EXPAND_ICON: Class;
+
+        public var rawData: ByteArray;
+        public var saveFileName:String = "";
+
+        public function download(): void
+        {
+            const item: IListItem = this.data as IListItem;
+            this.rawData = this.getItemData();
+            if (!item) return;
+            if (!ItemType.isProtected(item.type) || item is ListInputItem)
+            {
+                this.openCurrentItem();
+            }
+            else
+            {
+                this.askForPassword();
+            }
+        }
+        protected function getItemData():ByteArray{
+            const item: IListItem = this.data as IListItem;
+            return item ? item.getData() : null;
+        }
+        public function remove(): void
+        {
+            this.dispatchEvent(new ItemEvent(ItemEvent.ITEM_REMOVE, true, false, this.data as ListItem));
+        }
+		
+        private function openCurrentItem(): void
+        {
+            const item:ListItem = this['data'] as ListItem;
+            if (ItemType.isText(item.type))
+            {
+                this.rawData.position = 0;
+                TextPreviewWindow.display(this.rawData.readUTFBytes(this.rawData.length), this.saveFileName, item.date);
+            }
+            else{
+				setTimeout(this.saveFileTimeoutHandler, 100, this.rawData, this.saveFileName);
+            }
+        }
+		private function saveFileTimeoutHandler(content:ByteArray, name:String=""):void{
+			const file: File = File.documentsDirectory;
+			file.save(content, name);
+		}
+        private function askForPassword(): void
+        {
+            var window: AskForPasswordWindow = AskForPasswordWindow.display();
+            window.addEventListener(PromptEvent.PROMPT_RECEIVED, this.passwordWindow_promptReceivedHandler);
+        }
+        private function passwordWindow_promptReceivedHandler(event: PromptEvent): void
+        {
+            BinUtils.xorByPassPhrase(this.rawData, event.prompt);
+            this.openCurrentItem();
+        }
+        ]]></fx:Script>
+</s:ItemRenderer>

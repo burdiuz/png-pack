@@ -1,0 +1,105 @@
+<?xml version="1.0"?>
+<itemrenderers:ListItemRenderer xmlns:fx="http://ns.adobe.com/mxml/2009" xmlns:itemrenderers="itemrenderers.*"
+                                xmlns:s="library://ns.adobe.com/flex/spark" dataChange="dataChangeHandler(event)" rollOver="{background.visible=true}" rollOut="{background.visible = false}">
+    <fx:Script><![CDATA[
+        import data.FileAttributes;
+        import data.IListFileItem;
+
+        import flashx.textLayout.conversion.TextConverter;
+
+        import mx.events.FlexEvent;
+
+        import spark.utils.TextFlowUtil;
+
+        [Bindable]
+        public var tip: String = "";
+
+        private function dataChangeHandler(event: FlexEvent): void
+        {
+            const item: IListFileItem = this.data as IListFileItem;
+            if (!item)
+            {
+                return;
+            }
+            const attributes: FileAttributes = item.attributes;
+            this.saveFileName = attributes.name;
+            this.dateDisplay.text = item.date.toString();
+            this.iconDisplay.source = ListItemIcons.getIconByType(item.type);
+            this.labelDisplay.text = attributes.name;
+            this.commentDisplay.text = item.comment;
+            var text: XML = <span>
+                <font color="#ffffff">
+                    <b>Type:</b>
+                </font>{attributes.type}
+                <br/>
+                <font color="#ffffff">
+                    <b>Creation Date:</b>
+                </font>{attributes.creationDate ? attributes.creationDate.toString() : "< unknown >"}
+                <br/>
+            </span>;
+            if (attributes.extended)
+            {
+                text.appendChild(<>
+                    <font color="#ffffff">
+                        <b>Modification Date:</b>
+                    </font>{attributes.modificationDate ? attributes.modificationDate.toString() : "< unknown >"}
+                    <br/>
+                    <font color="#ffffff">
+                        <b>Was Downloaded:</b>
+                    </font>{attributes.downloaded ? "Yes" : "No"}
+                    <br/>
+                    <font color="#ffffff">
+                        <b>Creator:</b>
+                    </font>{attributes.creator ? attributes.creator : "< unknown >"}
+                    <br/>
+                    <font color="#ffffff">
+                        <b>Path:</b>
+                    </font>{attributes.nativePath}
+                    <br/>
+                </>);
+            }
+            this.attributesDisplay.textFlow = TextConverter.importToFlow(text.toXMLString(), TextConverter.TEXT_FIELD_HTML_FORMAT);
+        }
+        override protected function getItemData():ByteArray{
+            const item:IListFileItem = this.data as IListFileItem;
+            return item ? item.getFileData() : null;
+        }
+        private function downloadIconDisplay_clickHandler(event: MouseEvent): void
+        {
+            this.download();
+        }
+
+        private function image1_clickHandler(event: MouseEvent): void
+        {
+            this.remove();
+        }
+
+        private function expandButton_clickHandler(event: MouseEvent): void
+        {
+            this.currentState = this.currentState == "collapsed" ? "expanded" : "collapsed";
+        }
+        ]]></fx:Script>
+    <itemrenderers:states>
+        <s:State name="collapsed"/>
+        <s:State name="expanded"/>
+    </itemrenderers:states>
+    <s:Rect id="background" left="0" top="0" right="0" bottom="0" visible="false">
+        <s:fill>
+            <s:SolidColor color="#3f3f3f"/>
+        </s:fill>
+    </s:Rect>
+    <s:VGroup left="0" top="0" right="0" bottom="0" paddingLeft="5" paddingTop="5" paddingRight="5" paddingBottom="5">
+        <s:Label id="dateDisplay"/>
+        <s:HGroup width="100%" verticalAlign="middle" gap="5">
+            <s:Image id="expandButton" click="expandButton_clickHandler(event)" source.collapsed="{EXPAND_ICON}" source.expanded="{COLLAPSE_ICON}" buttonMode="true" useHandCursor="true"/>
+            <s:Image id="iconDisplay" toolTip="{tip}"/>
+            <s:VGroup width="100%">
+                <s:Label width="100%" id="labelDisplay" maxDisplayedLines="1" toolTip="{tip}"/>
+                <s:Label width="100%" id="commentDisplay" fontStyle="italic"/>
+            </s:VGroup>
+            <s:Image id="downloadIconDisplay" source="@Embed('../icons/download_icon.png')" click="downloadIconDisplay_clickHandler(event)" toolTip="Preview or Save this data item" buttonMode="true" useHandCursor="true"/>
+            <s:Image source="@Embed('../icons/remove_icon.png')" toolTip="Remove data from the Storage Image" click="image1_clickHandler(event)" buttonMode="true" useHandCursor="true"/>
+        </s:HGroup>
+        <s:RichText id="attributesDisplay" width="100%" includeIn="expanded" itemCreationPolicy="immediate"/>
+    </s:VGroup>
+</itemrenderers:ListItemRenderer>

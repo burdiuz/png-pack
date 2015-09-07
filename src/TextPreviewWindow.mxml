@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<s:Window xmlns:fx="http://ns.adobe.com/mxml/2009" xmlns:s="library://ns.adobe.com/flex/spark" title="Text Preview" width="640" height="480" alwaysInFront="true" minimizable="false" showStatusBar="false"  backgroundColor="#333333">
+    <fx:Script><![CDATA[
+        import data.Settings;
+
+        [Bindable]
+        public var text:String;
+        public var createdDate:Date;
+        public var saveFileName:String;
+
+        static public function display(text:String, saveFileName:String=null, date:Date=null):void
+        {
+            const window:TextPreviewWindow = new TextPreviewWindow();
+            window.text = text;
+            window.createdDate = date;
+            window.saveFileName = saveFileName;
+            window.open();
+        }
+        private function button1_clickHandler(event:MouseEvent):void
+        {
+            this.close();
+        }
+        private function button2_clickHandler(event:MouseEvent):void
+        {
+            const file:File = File.documentsDirectory.clone();
+            file.save(this.text, this.saveFileName ? this.saveFileName : Settings.instance.getTextFileName(this.createdDate));
+        }
+        ]]></fx:Script>
+    <s:layout>
+        <s:VerticalLayout paddingLeft="5" paddingTop="5" paddingRight="5" paddingBottom="5"/>
+    </s:layout>
+    <s:TextArea width="100%" height="100%" text="{text}"/>
+    <s:HGroup width="100%" horizontalAlign="right">
+        <s:Button label="Save as new File..." click="button2_clickHandler(event)"/>
+        <s:Button label="Close" click="button1_clickHandler(event)"/>
+    </s:HGroup>
+</s:Window>

@@ -1,0 +1,446 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:WindowedApplication xmlns:fx="http://ns.adobe.com/mxml/2009"
+                       xmlns:s="library://ns.adobe.com/flex/spark"
+                       xmlns:mx="library://ns.adobe.com/flex/mx" xmlns:local="*" minWidth="450" width="450" height="600"
+                       maxWidth="800" skinClass="skins.ApplicationSkin" initialize="initializeHandler(event)"
+                       applicationComplete="applicationCompleteHandler(event)" nativeDragEnter="dragEnterHandler(event)"
+                       nativeDragDrop="dragDropHandler(event)" preinitialize="windowedapplication1_preinitializeHandler(event)">
+	<fx:Style source="style.css"/>
+	<fx:Script><![CDATA[
+		import data.FileAttributes;
+		import data.IListInputItem;
+		import data.ItemType;
+		import data.ListFileItem;
+		import data.ListItem;
+		import data.ListStorageItem;
+		import data.ListTextItem;
+		import data.Settings;
+		import data.bin.PNGChunk;
+		import data.bin.PNGFile;
+		import data.bin.PNGUtil;
+		
+		import events.ItemEvent;
+		
+		import itemrenderers.ListFileItemRenderer;
+		import itemrenderers.ListTextItemRenderer;
+		
+		import mx.collections.ArrayList;
+		import mx.controls.Alert;
+		import mx.events.CloseEvent;
+		import mx.events.CollectionEvent;
+		import mx.events.FlexEvent;
+		import mx.managers.DragManager;
+		
+		import settings.PlacementScheme;
+		
+		import spark.events.TextOperationEvent;
+
+        Settings;
+
+        private var _storageInputFile: File;
+        private var _inputFile: File;
+        private var _storage: ArrayList;
+        private var _pngFile: PNGFile;
+        [Bindable]
+        public var storageFileSelected: Boolean;
+        [Bindable]
+        public var storageModified: Boolean;
+
+        protected function initializeHandler(event: FlexEvent): void
+        {
+            this.storage = new ArrayList();
+            this.storageModified = false;
+            this.inputDataGroup.addEventListener(ItemEvent.ITEM_REMOVE, this.inputDataGroup_itemRemoveHandler);
+            this.setInputFile(File.applicationStorageDirectory.resolvePath("images"));
+        }
+		
+		protected function applicationCompleteHandler(event: FlexEvent): void
+		{
+			
+		}
+		protected function setInputFile(file:File): void
+		{
+			if(this._storageInputFile){
+				this._storageInputFile.removeEventListener(Event.SELECT, this.compressInputFile_selectHandler);
+			}
+			this._storageInputFile = file;
+			if(file){
+				file.addEventListener(Event.SELECT, this.compressInputFile_selectHandler);
+			}
+		}
+
+        // ----------------------------- Storage File
+        protected function selectImageClickHandler(event: MouseEvent): void
+        {
+            const filters: Array = [
+                new FileFilter('PNG Image', '*.png')
+            ];
+            this._storageInputFile.browseForOpen('Select PNG Image', filters);
+        }
+
+        protected function dragEnterHandler(event: NativeDragEvent): void
+        {
+            if (event.clipboard.hasFormat(ClipboardFormats.FILE_LIST_FORMAT))
+            {
+                var files: Array = event.clipboard.getData(ClipboardFormats.FILE_LIST_FORMAT) as Array;
+                if (files.length)
+                {
+                    DragManager.acceptDragDrop(this);
+                }
+            }
+        }
+
+        protected function dragDropHandler(event: NativeDragEvent): void
+        {
+            var list: Array = event.clipboard.getData(ClipboardFormats.FILE_LIST_FORMAT) as Array;
+            if (list.length)
+            {
+                for each(var file: File in list)
+                {
+                    if (file.extension.toLowerCase() == "png")
+                    {
+                        break;
+                    }
+                }
+                if (!file)
+                {
+                    Alert.show("Only PNG images allowed.");
+                    return;
+                }
+                this.setInputFile(file);
+                this.updateStorageFile();
+            }
+        }
+
+        //------------------------ Input File
+        protected function compressInputFile_selectHandler(event: Event): void
+        {
+            this.updateStorageFile();
+        }
+
+        private function updateStorageFile(): void
+        {
+            this.storageFileInputField.text = this._storageInputFile.nativePath;
+            this.storageFileSelected = true;
+            this.cleanInputStorage();
+            this._pngFile = PNGUtil.readFile(this._storageInputFile);
+            const modified: Boolean = this.storageModified;
+            const list: Vector.<PNGChunk> = this._pngFile.chunks;
+            var length: int = list.length;
+            for (var index: int = 0; index < length; index++)
+            {
+                var chunk: PNGChunk = list[index];
+                var type: String = chunk.type;
+                if (ItemPNGChunkTypes.isValid(type))
+                {
+                    var item: ListStorageItem = ItemPNGChunkTypes.getListItem(chunk);
+                    this._storage.addItem(item);
+                    list.splice(index, 1);
+                    index--;
+                    length--;
+                }
+            }
+            this._pngFile.chunks = list;
+            this.storageModified = modified;
+			this.currentState = this._storage.length ? "view" : "edit";
+            this.storageImage.source = PNGFile.write(this._pngFile);
+        }
+        private function cleanInputStorage():void{
+            var length:int = this._storage.length;
+            const modified: Boolean = this.storageModified;
+            for(var index:int=0; index<length;  index++){
+                if(this._storage.getItemAt(index)  is ListStorageItem){
+                    this._storage.removeItemAt(index);
+                    index--;
+                    length--;
+                }
+            }
+            this.storageModified = modified;
+        }
+        protected function compressDataFile_clickHandler(event: MouseEvent): void
+        {
+            if (!this._inputFile)
+            {
+                this._inputFile = File.documentsDirectory;
+            }
+            this._inputFile.addEventListener(Event.SELECT, inputFile_selectHandler);
+            this._inputFile.addEventListener(Event.CANCEL, this.inputFile_cancelHandler);
+            this._inputFile.browseForOpen("Select any file to store", [new FileFilter("Any file", "*.*")]);
+        }
+
+        private function inputFile_selectHandler(event: Event): void
+        {
+            this.fileInputField.text = this._inputFile.nativePath;
+            this.updateAddButtonState();
+        }
+
+		private function inputFile_cancelHandler(event: Event): void
+        {
+            this.inputFileRemove();
+        }
+
+        [Bindable]
+        public function get storage(): ArrayList
+        {
+            return this._storage;
+        }
+
+        public function set storage(value: ArrayList): void
+        {
+            if (this._storage != value)
+            {
+                if (this._storage)
+                {
+                    this._storage.removeEventListener(CollectionEvent.COLLECTION_CHANGE, this.storage_collectionChangeHandler);
+                }
+                this._storage = value ? value : new ArrayList();
+                this._storage.addEventListener(CollectionEvent.COLLECTION_CHANGE, this.storage_collectionChangeHandler);
+                this.storageModified = true;
+            }
+        }
+
+        private function storage_collectionChangeHandler(event: CollectionEvent): void
+        {
+            this.storageModified = true;
+        }
+
+        private function inputFileRemove(): void
+        {
+            if (!this._inputFile)
+            {
+                return;
+            }
+            this._inputFile.removeEventListener(Event.SELECT, inputFile_selectHandler);
+            this._inputFile.removeEventListener(Event.CANCEL, this.inputFile_cancelHandler);
+            this._inputFile = null;
+        }
+
+        private function clearInput(): void
+        {
+            this.clearInputFields();
+            this._inputFile = this._inputFile ? (this._inputFile.isDirectory ? this._inputFile : this._inputFile.parent) : null;
+            this.clearInputFields();
+            this.updateAddButtonState();
+        }
+
+        private function clearInputFields(): void
+        {
+            this.fileInputField.text = "";
+            this.commentInputField.text = "";
+            this.textInputfield.text = "";
+            this.addInputButton.enabled = false;
+        }
+
+        private function updateAddButtonState(): void
+        {
+            var enabled: Boolean = false;
+            switch (this.inputNavigator.selectedIndex)
+            {
+                case 0:
+                default:
+                    enabled = this._inputFile && this._inputFile.nativePath && this._inputFile.exists && !this._inputFile.isDirectory;
+                    break;
+                case 1:
+                    enabled = this.textInputfield.text && this.textInputfield.text.length;
+                    break;
+            }
+            this.addInputButton.enabled = enabled;
+        }
+
+        private function inputListItemRenderer(item: ListItem): ClassFactory
+        {
+            return new ClassFactory(ItemType.isFile(item.type) ? ListFileItemRenderer : ListTextItemRenderer);
+        }
+
+        private function addInputButton_clickHandler(event: MouseEvent): void
+        {
+            var item: ListItem;
+            switch (this.inputNavigator.selectedIndex)
+            {
+                case 0:
+                default:
+                    item = this.composeFileItemFromInput();
+                    break;
+                case 1:
+                    item = this.composeTextItemFromInput();
+                    break;
+            }
+            this.storage.addItemAt(item, 0);
+            this.clearInput();
+        }
+
+		private function composeFileItemFromInput(): ListFileItem
+        {
+            const item: ListFileItem = new ListFileItem(this._inputFile, this.commentInputField.text, this.saveAttribCheckbox.selected);
+            item.password = this.passwordInputField.text;
+            return item;
+        }
+
+		private function composeTextItemFromInput(): ListTextItem
+        {
+            const item: ListTextItem = new ListTextItem(this.textInputfield.text);
+            item.password = this.passwordInputField.text;
+            return item;
+        }
+
+        private function textInputfield_changeHandler(event: TextOperationEvent): void
+        {
+            this.updateAddButtonState();
+        }
+
+		private function inputDataGroup_itemRemoveHandler(event: ItemEvent): void
+        {
+            this._storage.removeItem(event.item);
+        }
+
+        private function button1_clickHandler(event: MouseEvent): void
+        {
+            Alert.show("All removed content cannot be restored after saving changes to Storage Image.", "Remove All content?", Alert.YES | Alert.NO, null, this.clearAllAlert_closeHandler);
+        }
+
+        private function clearAllAlert_closeHandler(event: CloseEvent): void
+        {
+            if (event.detail == Alert.YES)
+            {
+                this._storage.removeAll();
+            }
+        }
+		private var _saveAsTempFile:File;
+		private function saveAs_clickHandler(event:MouseEvent):void{
+			const file:File = this._saveAsTempFile = this._storageInputFile.clone();
+			file.addEventListener(Event.SELECT, this.saveAsFileSelectHandler);
+			file.addEventListener(Event.CANCEL, this.saveAsFileCancelHandler);
+			file.browseForSave("Select location for new Storage Image to save");
+		}
+		private function saveAsFileSelectHandler(event:Event):void{
+			const file:File = this._saveAsTempFile;
+			this.setInputFile(file);
+			this.storageFileInputField.text = this._storageInputFile.nativePath;
+			this.saveAsFileCancelHandler(null);
+			this.saveChanges_clickHandler(null);
+		}
+		private function saveAsFileCancelHandler(event:Event):void{
+			const file:File = this._saveAsTempFile;
+			file.removeEventListener(Event.SELECT, this.saveAsFileSelectHandler);
+			file.removeEventListener(Event.CANCEL, this.saveAsFileCancelHandler);
+		}
+		
+        private function saveChanges_clickHandler(event: MouseEvent): void
+        {
+            if (!this._storage.length)
+            {
+                this.savePNGFile(this._pngFile);
+                return;
+            }
+            const chunks: Array = [];
+            for each(var item: ListItem in this._storage.source)
+            {
+                if (item is ListStorageItem)
+                {
+                    chunks.push((item as ListStorageItem).chunk);
+                    continue;
+                }
+                chunks.push((item as IListInputItem).compose());
+            }
+            const file: PNGFile = this._pngFile.copy();
+            PlacementScheme.mixin(file.chunks, chunks, Settings.instance.placementScheme);
+            this.savePNGFile(file);
+        }
+
+        private function savePNGFile(file: PNGFile): void
+        {
+            FileUtils.write(PNGFile.write(file), this._storageInputFile);
+            Alert.show("Storage Image Saved!");
+        }
+		
+		protected function windowedapplication1_preinitializeHandler(event:FlexEvent):void{
+			const images:File = File.applicationStorageDirectory.resolvePath("images");
+			if(!images.exists){
+				var source:File = File.applicationDirectory.resolvePath("images");
+				if(source.exists && source.isDirectory){
+					source.copyTo(images);
+				}
+			}
+		}
+		
+	]]></fx:Script>
+    <fx:Declarations>
+        <!-- Place non-visual elements (e.g., services, value objects) here -->
+    </fx:Declarations>
+	<s:states>
+		<s:State name="view"/>
+		<s:State name="edit"/>
+	</s:states>
+	<s:layout>
+		<s:VerticalLayout paddingLeft="5" paddingTop="5" paddingRight="5" paddingBottom="5"/>
+	</s:layout>
+	<s:Label text="Storage Image file:"/>
+	<s:HGroup width="100%" gap="5" verticalAlign="top">
+        <s:Image id="storageImage" width="96" height="96" click="selectImageClickHandler(event)" buttonMode="true" useHandCursor="true" backgroundColor="#3f3f3f" smooth="true" scaleMode="letterbox" toolTip="Storage Image preview"/>
+		<s:VGroup width="100%" height="100%">
+			<s:HGroup width="100%">
+				<!--- @private -->
+				<local:PathText id="storageFileInputField" prompt="Please, click to browse to Storage Image file..." width="100%"/>
+				<s:Button label="Browse" click="selectImageClickHandler(event)" buttonMode="true" useHandCursor="true" toolTip="Browse for Storage Image select"/>
+			</s:HGroup>
+			<s:HGroup width="100%" height="100%" verticalAlign="middle" horizontalAlign="center" visible="{storageFileSelected}">
+				<s:Button label="Add Data to Storage Image" includeIn="view" buttonMode="true" useHandCursor="true" click="currentState = 'edit';"/>
+			</s:HGroup>
+		</s:VGroup>
+	</s:HGroup>
+	<mx:TabNavigator id="inputNavigator" width="100%" height="125" change="updateAddButtonState()" creationPolicy="all" includeIn="edit">
+		<s:NavigatorContent label="Add File to Storage Image" width="100%" height="100%">
+			<s:layout>
+				<s:VerticalLayout paddingLeft="5" paddingTop="20" paddingRight="5" paddingBottom="5"/>
+			</s:layout>
+			<s:HGroup width="100%" buttonMode="true" useHandCursor="true" click="compressDataFile_clickHandler(event)">
+				<local:PathText id="fileInputField" prompt="Please, click to select Input File that will be added to storage..." width="100%" mouseEnabled="false" mouseChildren="false"/>
+				<s:Button label="Browse" toolTip="Browse for input file to add to the Storage Image"/>
+			</s:HGroup>
+			<s:TextInput id="commentInputField" prompt="Add comment to stored file here..." width="100%"/>
+			<s:CheckBox id="saveAttribCheckbox" selected="true" label="Save original file attributes (access dates, original path, etc)" buttonMode="true" useHandCursor="true"/>
+		</s:NavigatorContent>
+		<s:NavigatorContent label="Add Text to Storage Image" width="100%" height="100%">
+			<s:layout>
+				<s:VerticalLayout/>
+			</s:layout>
+			<s:TextArea id="textInputfield" width="100%" height="100%" prompt="Type your Text here..." change="textInputfield_changeHandler(event)"/>
+		</s:NavigatorContent>
+	</mx:TabNavigator>
+	<s:HGroup width="100%" verticalAlign="middle" includeIn="edit">
+		<s:TextInput id="passwordInputField" prompt="Enter password here..." displayAsPassword="true" width="150"/>
+		<s:CheckBox id="showPasswordCheckBox" selected="false" label="Show password" change="{passwordInputField.displayAsPassword = !showPasswordCheckBox.selected;}" buttonMode="true" useHandCursor="true"/>
+		<s:Spacer width="100%"/>
+		<s:Button id="addInputButton" label="Add to Storage Image" enabled="false" click="addInputButton_clickHandler(event)" toolTip="Add Input data to the Storage Image" buttonMode="true" useHandCursor="true"/>
+	</s:HGroup>
+	<s:HGroup width="100%" paddingTop="15" verticalAlign="middle" visible="{storageFileSelected}">
+		<s:Label text="Stored Image data:"/>
+		<s:Spacer width="100%"/>
+		<s:Button label="Clear All" click="button1_clickHandler(event)" enabled="{Boolean(storage.length)}" toolTip="Remove all input data from the Storage Image" buttonMode="true" useHandCursor="true"/>
+	</s:HGroup>
+	<s:Group width="100%" height="100%" visible="{storageFileSelected}">
+		<s:Rect left="0" top="0" right="0" bottom="0">
+			<s:stroke>
+				<s:SolidColorStroke color="0x474747"/>
+			</s:stroke>
+		</s:Rect>
+		<s:Rect left="1" top="1" right="1" bottom="1">
+			<s:stroke>
+				<s:SolidColorStroke color="0x141414"/>
+			</s:stroke>
+		</s:Rect>
+		<s:Scroller left="1" top="1" right="1" bottom="1" horizontalScrollPolicy="off">
+			<s:DataGroup id="inputDataGroup" dataProvider="{storage}" width="100%" height="100%" itemRendererFunction="{this.inputListItemRenderer}">
+				<s:layout>
+					<s:VerticalLayout/>
+				</s:layout>
+			</s:DataGroup>
+		</s:Scroller>
+	</s:Group>
+	<s:HGroup width="100%" visible="{storageFileSelected}">
+		<s:Button label="Settings" buttonMode="true" useHandCursor="true" click="SettingsWindow.create()"/>
+		<s:Spacer width="100%"/>
+		<s:Button label="Save Storage Image" enabled="{storageFileSelected &amp;&amp; storageModified}" click="saveChanges_clickHandler(event)" toolTip="Apply changes to the Storage Image" buttonMode="true" useHandCursor="true"/>
+		<s:Button label="Save As new Storage Image" enabled="{storageFileSelected &amp;&amp; storageModified}" click="saveAs_clickHandler(event)" toolTip="Apply Changes and allows to save as new Storage Image" buttonMode="true" useHandCursor="true"/>
+	</s:HGroup>
+</s:WindowedApplication>

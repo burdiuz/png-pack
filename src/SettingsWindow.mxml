@@ -1,0 +1,153 @@
+<?xml version="1.0"?>
+<s:Window xmlns:fx="http://ns.adobe.com/mxml/2009" xmlns:s="library://ns.adobe.com/flex/spark" title="Settings" initialize="initializeHandler(event)" close="closeHandler(event)" type="{NativeWindowType.UTILITY}" width="450" height="530" minWidth="450" minHeight="300" minimizable="false" maximizable="false" resizable="true" showStatusBar="false"  backgroundColor="#333333">
+    <fx:Script><![CDATA[
+        import data.Settings;
+
+        import mx.collections.ArrayList;
+        import mx.collections.ArrayList;
+        import mx.controls.Alert;
+        import mx.events.CloseEvent;
+        import mx.events.FlexEvent;
+
+        import settings.PlacementScheme;
+
+        import spark.events.TextOperationEvent;
+
+        static public var _instance: SettingsWindow;
+        [Bindable]
+        public var target: Settings = Settings.instance;
+
+        static public function create(): SettingsWindow
+        {
+            if (_instance)
+            {
+                _instance.nativeWindow.notifyUser(NotificationType.INFORMATIONAL);
+                return _instance;
+            }
+            _instance = new SettingsWindow();
+            _instance.alwaysInFront = true;
+            _instance.open();
+            return _instance;
+        }
+
+        static public function close(): void
+        {
+            _instance.close();
+        }
+
+        override public function close(): void
+        {
+            super.close();
+            _instance = null;
+        }
+
+        private function initializeHandler(event: FlexEvent): void
+        {
+            var dropdownIndex: int = -1;
+            const dropdownProvider: ArrayList = PlacementScheme.createDataProvider();
+            const list: Array = dropdownProvider.source;
+            for (var index: * in list)
+            {
+                if (list[index].value == target.placementScheme)
+                {
+                    dropdownIndex = index;
+                    break;
+                }
+            }
+            this.placmenetSchemeDropdownList.dataProvider = dropdownProvider;
+            this.placmenetSchemeDropdownList.selectedIndex = dropdownIndex;
+            this.updateTextFileNameDisplay();
+        }
+
+        private function saveChanges_clickHandler(event: MouseEvent): void
+        {
+            var markers: Array = [this.textMarkerInput.text, this.textProtectedMarkerInput.text, this.fileMarkerInput.text, this.fileProtectedMarkerInput.text];
+            for each(var marker: String in markers)
+            {
+                if (marker.length != 4)
+                {
+                    Alert.show("PNG Chunk marker should be exactly 4 chars length", "Error");
+                    return;
+                }
+            }
+            this.target.placementScheme = this.placmenetSchemeDropdownList.selectedItem ? this.placmenetSchemeDropdownList.selectedItem.value : PlacementScheme.DEFAULT;
+            this.target.textPNGChunkType = this.textMarkerInput.text;
+            this.target.textProtectedChunkType = this.textProtectedMarkerInput.text;
+            this.target.fileChunkType = this.fileMarkerInput.text;
+            this.target.fileProtectedChunkType = this.fileProtectedMarkerInput.text;
+            Settings.write();
+            Alert.show("Settings Saved!", "", Alert.OK, this, this.savedChangesHandler);
+        }
+
+        private function savedChangesHandler(event: CloseEvent): void
+        {
+            this.close();
+        }
+
+        private function closeHandler(event: Event): void
+        {
+            _instance = null;
+        }
+
+        private function updateTextFileNameDisplay(): void
+        {
+            this.textFileNameDisplay.text = "Example: "+Settings.instance.getTextFileName();
+        }
+        ]]></fx:Script>
+    <s:Scroller left="0" top="0" right="0" bottom="0">
+        <s:VGroup paddingLeft="5" paddingTop="5" paddingRight="5" paddingBottom="5">
+        <s:Form width="100%" height="100%">
+            <s:layout>
+                <s:FormLayout variableRowHeight="false" rowHeight="35" gap="0"/>
+            </s:layout>
+            <s:FormItem width="100%" label="PNG Chunk placement:" textAlign="right">
+                <s:DropDownList id="placmenetSchemeDropdownList" width="250" textAlign="left"/>
+            </s:FormItem>
+            <s:FormItem/>
+            <s:FormHeading label="PNG Chunk markers:" height="40"/>
+            <s:FormItem width="100%" label="Text:" textAlign="right">
+                <s:layout>
+                    <s:HorizontalLayout gap="5"/>
+                </s:layout>
+                <s:TextInput id="textMarkerInput" text="{target.textPNGChunkType}" restrict="a-zA-Z0-9" width="75" maxChars="4"/><s:Button label="Set to Default" click="textMarkerInput.text = ItemPNGChunkTypes.DEFAULT_TEXT"/>
+            </s:FormItem>
+            <s:FormItem width="100%" label="Protected Text:" textAlign="right">
+                <s:layout>
+                    <s:HorizontalLayout gap="5"/>
+                </s:layout>
+                <s:TextInput id="textProtectedMarkerInput" text="{target.textProtectedChunkType}" restrict="a-zA-Z0-9" width="75" maxChars="4"/><s:Button label="Set to Default" click="textProtectedMarkerInput.text = ItemPNGChunkTypes.DEFAULT_TEXT_PROTECTED"/>
+            </s:FormItem>
+            <s:FormItem width="100%" label="File:" textAlign="right">
+                <s:layout>
+                    <s:HorizontalLayout gap="5"/>
+                </s:layout>
+                <s:TextInput id="fileMarkerInput" text="{target.fileChunkType}" restrict="a-zA-Z0-9" width="75" maxChars="4"/><s:Button label="Set to Default" click="fileMarkerInput.text = ItemPNGChunkTypes.DEFAULT_FILE"/>
+            </s:FormItem>
+			<s:FormItem width="100%" label="Protected File:" textAlign="right">
+				<s:layout>
+					<s:HorizontalLayout gap="5"/>
+				</s:layout>
+				<s:TextInput id="fileProtectedMarkerInput" text="{target.fileProtectedChunkType}" restrict="a-zA-Z0-9" width="75" maxChars="4"/><s:Button label="Set to Default" click="fileProtectedMarkerInput.text = ItemPNGChunkTypes.DEFAULT_FILE_PROTECTED"/>
+			</s:FormItem>
+			<s:FormItem/>
+            <s:FormItem width="100%" label="Text file template:" textAlign="right"/>
+            <s:HGroup paddingLeft="50" gap="5" verticalAlign="bottom">
+                <s:TextInput id="textFileNameInput" text="@{target.textFileNameGeneral}" width="100" change="updateTextFileNameDisplay()"/><s:Label text="."/><s:TextInput text="@{target.textFileExtension}" width="75" change="updateTextFileNameDisplay()"/><s:CheckBox selected="@{target.textFileUseDate}" label="Use Saved Date" change="updateTextFileNameDisplay()"/>
+            </s:HGroup>
+			<s:HGroup paddingLeft="50" paddingTop="10">
+                <s:Label id="textFileNameDisplay"/>
+			</s:HGroup>
+			<s:HGroup paddingLeft="50" paddingTop="10">
+				<s:CheckBox selected="@{target.compressTextData}" label="Compress Text data"/>
+			</s:HGroup>
+				<s:HGroup paddingLeft="50" paddingTop="10">
+				<s:CheckBox selected="@{target.compressFileData}" label="Compress File data"/>
+			</s:HGroup>
+        </s:Form>
+        <s:HGroup width="100%" horizontalAlign="right">
+            <s:Button label="Save Changes" click="saveChanges_clickHandler(event)"/>
+            <s:Button label="Close" click="{this.close();}"/>
+        </s:HGroup>
+        </s:VGroup>
+    </s:Scroller>
+</s:Window>
