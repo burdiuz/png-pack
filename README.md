@@ -28,7 +28,8 @@ Advanced user can change storage settings
 2. Click on green arrow "Download" button for file you want to retrieve. ![List with stored data](images/retrieve2.png)  
 3. If Password request, enter password and save file. ![Password request dialog](images/retrieve3.png)  
   
-> **Note:** If you want to add more data to Storage Image, select it, then click on "Add data to Storage Image" button. ![Append Storage Image with data](images/append1.png)  
+> **Note:** If you want to add more data to Storage Image, select it, then click on "Add data to Storage Image" button.  
+![Append Storage Image with data](images/append1.png)  
   
 ###Resources used in this application  
 [Adobe Flex SDK 4](http://www.adobe.com/devnet/flex/flex-sdk-download.html)  
