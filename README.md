@@ -3,7 +3,7 @@
 This is an open-source application based on  Adobe AIR runtime. It allows to save your custom data into PNG image file and restore it back from image.  
   
 [Download Image Data Pack installation file](https://github.com/burdiuz/png-pack/raw/master/ImagePack.air)  
-> **Note:** This is cross-platform application that can be installed on Windows, Mac or Linux machine, but you will need to have [Adobe AIR runtime](https://get.adobe.com/air/) installed before installing User-Agent Comparer application. [Download Adobe AIR runtime](https://get.adobe.com/air/)
+> **Note:** This is cross-platform application that can be installed on Windows, Mac or Linux machine, but you will need to have [Adobe AIR runtime](https://airsdk.harman.com/runtime) installed before installing Image Data Pack application. Since [Adobe stopped support of Adobe AIR](https://blog.adobe.com/en/publish/2019/05/30/the-future-of-adobe-air), it passed full control of Aobe Flash/Air to "HARMAN a SAMSUNG company" and can be downloaded from their website, [download Adobe AIR runtime](https://airsdk.harman.com/runtime)
   
 Main window of the application  
 ![Application Mian window](images/mainwindow.png)  
@@ -11,7 +11,7 @@ Advanced user can change storage settings
 ![Settings window](images/settingswindow.png)  
 > **Note:** This application uses XOR encryption if password was entered. This is weak type of encryption and if you want to really encrypt data, please, use other application for this.
   
-###How to use
+###How to use  
 ####To add data to the image
 1. Select image file by clicking "Browse" button, this image is named "Storage Image" in this application because it will store all the data you want to hide. After loading image you should see it on the top left corner of application window. ![Select Storage Image with data](images/store1.png)  
 2. Dependent on what you want to save -- file or plain text select tab "Add file to Storage Image"  or "Add Text to Storage Image".  
