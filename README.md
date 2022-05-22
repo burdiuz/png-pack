@@ -3,7 +3,7 @@
 This is an open-source application based on  Adobe AIR runtime. It allows to save your custom data into PNG image file and restore it back from image.  
   
 [Download Image Data Pack installation file](https://github.com/burdiuz/png-pack/raw/master/ImagePack.air)  
-> **Note:** This is cross-platform application that can be installed on Windows, Mac or Linux machine, but you will need to have [Adobe AIR runtime](https://airsdk.harman.com/runtime) installed before installing Image Data Pack application. Since [Adobe stopped support of Adobe AIR](https://blog.adobe.com/en/publish/2019/05/30/the-future-of-adobe-air), it passed full control of Aobe Flash/Air to "HARMAN a SAMSUNG company" and can be downloaded from their website, [download Adobe AIR runtime](https://airsdk.harman.com/runtime)
+> **Note:** This is cross-platform application that can be installed on Windows, Mac or Linux machine, but you will need to have [Adobe AIR runtime](https://airsdk.harman.com/runtime) installed before installing Image Data Pack application. Since [Adobe stopped support of Adobe AIR](https://blog.adobe.com/en/publish/2019/05/30/the-future-of-adobe-air), it passed full control of Aobe Flash/Air to "HARMAN a SAMSUNG company" and runtime can be downloaded from their website, [download Adobe AIR runtime](https://airsdk.harman.com/runtime). It is still fully functional application and can be used like 10 years before.
   
 Main window of the application  
 ![Application Mian window](images/mainwindow.png)  
